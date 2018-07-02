@@ -20,3 +20,196 @@ class Bloque(pygame.sprite.Sprite):
         self.image = pygame.Surface([largo_bloque, alto_bloque])
 
         self.image.fill(color)
+ 
+        # Extraemos el objeto rectángulo que posee las dimensiones de la imagen
+        self.rect = self.image.get_rect()
+         
+        # Movemos la esquina superior izquierda del rectángulo a las coordenadas x,y.
+        # Aquí es donde aparecerá nuestro bloque.
+        self.rect.x = x
+        self.rect.y = y
+ 
+ 
+class Pelota(pygame.sprite.Sprite):
+    """ Esta clase representa la pelota       
+        Deriva de la clase "Sprite" en Pygame """
+     
+    # Velocidad en píxeles por ciclo
+    velocidad = 10.0
+     
+    # Representación en coma flotante de la ubicación de la pelota
+    x = 0.0
+    y = 180.0
+     
+    # Rumbo de la pelota (en grados)
+    rumbo = 200
+ 
+    largo = 10
+    alto = 10
+     
+    # Constructor. Pasa el color del bloque así como su posición x e y
+    def __init__(self):
+        # Llama al constructor de la clase padre (Sprite)
+        super().__init__()
+         
+        # Crea la imagen de la pelota
+        self.image = pygame.Surface([self.largo, self.alto])
+         
+        # Color de la pelota
+        self.image.fill(BLANCO)
+
+        self.rect = self.image.get_rect()
+
+        self.alto_pantalla = pygame.display.get_surface().get_height()
+        self.largo_pantalla = pygame.display.get_surface().get_width()
+     
+    def botar(self, diff):
+        self.rumbo = (180 - self.rumbo) % 360
+        self.rumbo -= diff
+     
+    def update(self):
+        rumbo_radianes = math.radians(self.rumbo)
+
+        self.x += self.velocidad * math.sin(rumbo_radianes)
+        self.y -= self.velocidad * math.cos(rumbo_radianes)
+         
+        # Mueve la imagen hacia las coordenadas x e y
+        self.rect.x = self.x
+        self.rect.y = self.y
+         
+        if self.y <= 0:
+            self.botar(0)
+            self.y = 1
+
+        if self.x <= 0:
+            self.rumbo = (360 - self.rumbo) % 360
+            self.x = 1
+
+        if self.x > self.largo_pantalla - self.largo:
+            self.rumbo = (360 - self.rumbo) % 360
+            self.x = self.largo_pantalla - self.largo - 1
+
+        if self.y > 600:
+            return True
+        else:
+            return False
+ 
+class Protagonista(pygame.sprite.Sprite):
+   
+    def __init__(self):
+        """ Constructor para Protagonista. """
+        super().__init__()
+         
+        self.largo = 75
+        self.alto = 15
+        self.image = pygame.Surface([self.largo, self.alto])
+        self.image.fill((BLANCO))
+
+        self.rect = self.image.get_rect()
+        self.alto_pantalla = pygame.display.get_surface().get_height()
+        self.largo_pantalla = pygame.display.get_surface().get_width()
+ 
+        self.rect.x = 0
+        self.rect.y = self.alto_pantalla-self.alto
+     
+    def update(self):
+        """ Actualiza la posición del protagonista. """
+        pos = pygame.mouse.get_pos()
+        self.rect.x = pos[0]
+        if self.rect.x > self.largo_pantalla - self.largo:
+            self.rect.x = self.largo_pantalla - self.largo
+ 
+pygame.init()
+ 
+pantalla = pygame.display.set_mode([800, 600])
+ 
+pygame.display.set_caption('Breakout')
+
+pygame.mouse.set_visible(0)
+
+fuente = pygame.font.Font(None, 36)
+
+fondo_pantalla = pygame.Surface(pantalla.get_size())
+
+bloques = pygame.sprite.Group()
+pelotas = pygame.sprite.Group()
+todos_los_sprites = pygame.sprite.Group()
+
+protagonista = Protagonista()
+todos_los_sprites.add(protagonista)
+
+pelota = Pelota()
+todos_los_sprites.add(pelota)
+pelotas.add(pelota)
+
+top = 80
+
+numero_de_bloques = 32
+
+for fila in range(5):
+    # 32 columnas de bloques
+    for columna in range(0, numero_de_bloques):
+        # Crea un bloque (color,x,y)
+        bloque = Bloque(AZUL, columna * (largo_bloque + 2) + 1, top)
+        bloques.add(bloque)
+        todos_los_sprites.add(bloque)
+    # Mueve  hacia abajo el borde superior de la siguiente fila
+    top += alto_bloque + 2
+ 
+# Reloj para limitar la velocidad
+reloj = pygame.time.Clock()
+ 
+# ¿Se acabó el juego?
+game_over = False
+ 
+# ¿Salir del programa?
+salir_programa = False
+ 
+# Bucle principal
+while not salir_programa:
+
+    reloj.tick(30)
+
+    pantalla.fill(NEGRO)
+
+    for evento in pygame.event.get():
+        if evento.type == pygame.QUIT:
+            salir_programa = True
+     
+    # Mientras que el juego no acabe, actualizamos las posiciones del protagonista 
+    # y las pelotas.
+    if not game_over:
+        #actualizamos las posiciones del protagonista y las pelotas.
+        protagonista.update()
+        game_over = pelota.update()
+     
+    # Si terminamos, imprimir game over
+    if game_over:
+        texto = fuente.render("Game Over", True, BLANCO)
+        textopos = texto.get_rect(centerx=fondo_pantalla.get_width()/2)
+        textopos.top = 300
+        pantalla.blit(texto, textopos)
+
+    if pygame.sprite.spritecollide(protagonista, pelotas, False):
+        diff = (protagonista.rect.x + protagonista.largo/2) - (pelota.rect.x+pelota.largo/2)
+        pelota.rect.y = pantalla.get_height() - protagonista.rect.alto - pelota.rect.alto - 1
+        pelota.botar(diff)
+     
+    # Comprueba las colisiones entre las pelotas y los bloques
+    bloquesmuertos = pygame.sprite.spritecollide(pelota, bloques, True)
+     
+    # Si le damos a un bloque, botamos las pelotas
+    if len(bloquesmuertos) > 0:
+        pelota.botar(0)
+         
+        # El juego se termina si todos los bloques desaparecen.
+        if len(bloques) == 0:
+            game_over = True
+     
+    # Dibujamos la pantalla
+    todos_los_sprites.draw(pantalla)
+ 
+    # Actualizamos la pantalla para mostrar todo lo dibujado
+    pygame.display.flip()
+ 
+pygame.quit()
