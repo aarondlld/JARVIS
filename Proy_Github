@@ -1,0 +1,22 @@
+#Creamos un juego de plataformas :)
+import math
+import pygame
+ 
+# Definimos colores
+NEGRO = (0, 0, 0)
+BLANCO = (255, 255, 255)
+AZUL = (0, 0, 255)
+ 
+# Tamaño de los bloques
+largo_bloque = 23
+alto_bloque = 15
+ 
+class Bloque(pygame.sprite.Sprite):
+    def __init__(self, color, x, y):
+
+        super().__init__()
+
+        # El largo y alto son enviados como una lista al primer parámetro.
+        self.image = pygame.Surface([largo_bloque, alto_bloque])
+
+        self.image.fill(color)
